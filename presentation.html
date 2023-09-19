@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<link rel="stylesheet" href="node_modules/reveal.js/dist/reset.css">
+	<link rel="stylesheet" href="node_modules/reveal.js/dist/reveal.css">
+	<link rel="stylesheet" href="node_modules/reveal.js/dist/theme/white.css" id="theme">
+
+	<script src="node_modules/reveal.js/dist/reveal.js"></script>
+	<link rel="stylesheet" href="node_modules/reveal.js/plugin/highlight/monokai.css">
+	<script src="node_modules/reveal.js/plugin/highlight/highlight.js"></script>
+
+	<style>
+		body {
+			cursor: url('img/cursor.svg'), auto;
+		}
+
+		blockquote {
+			text-align: left;
+			font-size: .8em;
+		}
+
+		.left {
+			left: -8.33%;
+			float: left;
+			width: 50%;
+			z-index: -10;
+		}
+
+		.right {
+			left: 31.25%;
+			top: 75px;
+			text-align: right;
+			z-index: -10;
+			width: 50%;
+		}
+
+		.reveal h1,
+		.reveal h2,
+		.reveal h3,
+		.reveal h4,
+		.reveal h5,
+		.reveal h6 {
+			text-transform: none;
+		}
+
+		figcaption {
+			font-size: .8em;
+		}
+
+		.twoColumn {
+			display: grid;
+			grid-auto-flow: column;
+		}
+
+		.reveal .slide-number,
+		.slide-number-a {
+			color: black;
+			background-color: transparent;
+		}
+
+		.reveal pre {
+			width: 100%;
+		}
+	</style>
+
+	<title>Guse: Authentication for Web-Applications with OpenID Connect</title>
+</head>
+
+<body>
+	<div class="reveal">
+		<div class="slides">
+			<!-- Introduction -->
+			<section>
+				<h2>Authentication for Web-Applications with<br /> OpenID Connect</h2>
+				<p>by Dennis Guse</p>
+				<p><small>2023-09-19</small></p>
+			</section>
+
+			<section>
+				<div class="twoColumn">
+					<div style="display: flex;flex-direction: column;justify-content: center;">
+						<h3>Question:</h3>
+						Do you use "Log in with"?
+					</div>
+
+					<div>
+						<figure>
+							<img src="img/stackoverflow.png" style="height: 10em" />
+							<figcaption>Fig.1: Stackoverflow's login UI (screenshot 2023-09-16)</figcaption>
+						</figure>
+					</div>
+				</div>
+			</section>
+
+			<section>
+				<ol>
+					<li class="fragment highlight-current-blue">Basics</li>
+					<ol>
+						<li>What is a web application?</li>
+						<li>Why protect a web application?</li>
+						<li>Authentication and Identity</li>
+					</ol>
+
+					<li class="fragment highlight-current-blue">OpenID Connect</li>
+					<ol>
+						<li>Identity Token</li>
+						<li>Authorization Code Flow</li>
+						<li>Challenges</li>
+					</ol>
+
+					<li class="fragment highlight-current-blue">Interactive Quiz</li>
+
+					<li class="fragment highlight-current-blue">Summary and Recap</li>
+				</ol>
+			</section>
+
+			<!-- Content -->
+			<section>
+				<h2>What is a web application? (1)</h2>
+
+				<figure>
+					<img src="img/webpage.svg">
+					<figcaption>Fig.1: An overview of web application</figcaption>
+				</figure>
+			</section>
+
+			<section>
+				<h2>What is a web application? (2)</h2>
+				<figure>
+					<img src="img/Internet_dog.jpeg" style="height: 10em">
+					<figcaption>Fig.2: "On the Internet nobody knows you're a dog" <a href="">[Steiner,1993]</a></figcaption>
+				</figure>
+			</section>
+
+			<section>
+				<h2>What is a web application? (3)</h2>
+				<figure>
+					<img src="img/webpage2.svg">
+					<figcaption>Fig.3: A user of a web application may be unfriendly</figcaption>
+				</figure>
+			</section>
+
+			<section>
+				<h2>Why protect a web application?</h2>
+
+				<div class="twoColumn">
+					<div>
+						<figure>
+							<img src="img/alice-bob-eve.svg" style="height: 10em">
+							<figcaption>Fig.4: Different users have different goals</figcaption>
+						</figure>
+					</div>
+
+					<div style="text-align: left;">
+						Aspects:
+						<ul>
+							<li><i>Confidentiality</i>: access to information</li>
+							<li><i>Integrity</i>: modifying & creating information</li>
+							<li><i>Availability</i>: loss of information</li>
+						</ul>
+
+						<br />
+						<br />
+						<small>
+							Further reading:
+							<!-- THE CIA STRIKES BACK: REDEFINING CONFIDENTIALITY, INTEGRITY AND AVAILABILITY IN SECURITY-->
+							<a href="https://www.proso.com/dl/Samonas.pdf">[Samonas,2014]</a>,
+							<!-- SECURE COMPUTER SYSTEM: UNIFIED EXPOSITIO4 AND MULTICS INTERPRETATION-->
+							<a href="https://apps.dtic.mil/sti/tr/pdf/ADA023588.pdf">[Bell,1976]</a>
+						</small>
+					</div>
+				</div>
+			</section>
+
+			<section>
+				<h2>Presenting an identity (1)</h2>
+
+				<div>
+					<figure>
+						<img src="img/identity.svg" style="height: 10em">
+						<figcaption>Fig.5: Bob wants to know the identity of <i>unknown</i></figcaption>
+					</figure>
+				</div>
+			</section>
+
+			<section>
+				<h2>Presenting an identity (2)</h2>
+
+				<div>
+					<figure>
+						<img src="img/identity_shared.svg" style="height: 10em">
+						<figcaption>Fig.6: Identites may be shared</figcaption>
+					</figure>
+				</div>
+			</section>
+
+			<section>
+				<h2>What is authentication? (1)</h2>
+
+				Definition by OpenID Connect: <blockquote>"Process used to achieve sufficient confidence in the binding between the Entity and the presented Identity."</blockquote>
+				<small><a href="https://openid.net/specs/openid-connect-core-1_0.html">OpenIDConnect Core 1.0, 2014</a></small>
+			</section>
+
+			<section>
+				<h2>What is authentication? (2)</h2>
+
+				Definition by NIST: <blockquote>"Verifying the identity of a user, process, or device, often as a prerequisite to allowing access to resources in an information system."</blockquote>
+				<small><a href="https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.200.pdf">NIST FISP-200, 2006</a></small>
+			</section>
+
+			<section>
+				<h2>Authentication factors</h2>
+				<ul>
+					<li>knowledge (e.g., passwords, PINs)</li>
+					<li>ownership (e.g., hardware tokens, phone)</li>
+					<li>biometric (e.g., fingerprints, face)</li>
+					<li>... multi-factor authentication</li>
+				</ul>
+
+				<br />
+				<br />
+				<small>
+					Further reading:
+					<!--Computer Security Principles and Practice, 3rd Edition-->
+					<a href="https://ds.amu.edu.et/xmlui/bitstream/handle/123456789/17468/Computer_Security_Principles_and_Practice_(3rd_Edition).pdf">[Stallings,2015]</a>,
+					<!--Evaluating Authentication Mechanisms-->
+					<a href="https://books.google.de/books?id=wDVhy9EyEAEC&lpg=PR5">[Renaud,2007]</a>
+				</small>
+			</section>
+
+			<section>
+				<h2>Challenges for implementing authentication</h2>
+
+				<ul>
+					<li>must be done correctly</li>
+					<li>stored information is <i>sensitive</i></li>
+					<li>wide variety of authentication methods <br />(often more than one needed)</li>
+				</ul>
+			</section>
+
+			<section>
+				<h2>One solution: use Identity Provider</h2>
+
+				<figure>
+					<img src="img/webpage3.svg" style="height: 10em;">
+					<figcaption>Fig.6: Authentication using an Identity Provider</figcaption>
+				</figure>
+				</fieldset>
+			</section>
+
+			<section>
+				<h2>Identity Provider (IDP)</h2>
+
+				<ul>
+					<li>Implements authentication methods</li>
+					<li>The <u>one place</u> storing authentication information</li>
+					<li>Provides <u>trustable</u> information about an Identity</li>
+					<li>May provide Single Sign-on</li>
+				</ul>
+			</section>
+
+			<section>
+				<h2>OpenID Connect</h2>
+
+				<div class="twoColumn">
+					<div>
+						<figure>
+							<img src="img/openidlogo.png" />
+							<figcaption>Fig.7: Logo of OpenID Foundation</figcaption>
+						</figure>
+
+						<br />
+						<br />
+						<small>
+							<i>OpenID Connect Core 1.0 incorporating errata set 1 <a href="https://openid.net/specs/openid-connect-core-1_0.html">[OpenID Connect Core,2014]</a></i>
+						</small>
+					</div>
+
+					<div style="text-align:left; margin-left:3em">
+						Defines necessary protocols to implement and interact with an IDP
+						<br />
+						<br />
+						<ul>
+							<li>Provides information about an entity's identity</li>
+							<li>Provides authentication flows</li>
+							<li>Based upon OAuth2.0 and JWT</li>
+						</ul>
+					</div>
+				</div>
+			</section>
+
+			<section>
+				<h3>Excursus: JSON Web Token <a href="https://datatracker.ietf.org/doc/html/rfc7519">[RFC 7519]</a></h3>
+
+				<div>
+					A JSON Web Token (JWT) is a self-contained, signed message containing <u>claims</u>.
+				</div>
+				<figure>
+					<img src="img/jwt-example.png">
+					<figcaption>Fig.9: JWT Example (Screenshot from https://jwt.io)</figcaption>
+				</figure>
+			</section>
+
+			<section>
+				<h2>OpenID Connect: Authorization Code Flow</h2>
+
+				<figure>
+					<img src="img/webpage5.svg" style="height:10em">
+					<figcaption>Fig.9: JWT Example (Screenshot from https://jwt.io)</figcaption>
+				</figure>
+			</section>
+
+			<section>
+				<h2>Goals of OpenID Connect's Authorization Code Flow</h2>
+				<p>Relying Party</p>
+				<ul>
+					<li>wants to authenticate a user</li>
+					<li>wants to get identity data</li>
+					<li>doesn't want to handle authentication</li>
+				</ul>
+			</section>
+
+			<section>
+				<h2>Goals of OpenID Connect's Authorization Code Flow</h2>
+				<p>User</p>
+				<ul>
+					<li>wants to share identity data with Relying Party</li>
+					<li>... with consent for sharing one's data</li>
+					<li>want Single-Sign On</li>
+				</ul>
+			</section>
+
+			<section>
+				<h2>Authorization Code Flow (1)</h2>
+
+				<div>
+					<figure>
+						<img src="img/webpage4.svg" />
+						<figcaption>Fig.8: Authorization Code Flow</figcaption>
+					</figure>
+				</div>
+			</section>
+
+			<section>
+				<h2>Authorization Code Flow (2)</h2>
+
+				<div>
+					On success, the Relying Party get's an <u>Identity Token</u>. <br />
+					Content depends on requested <u>scopes</u> and <u>consent</u>.
+					<figure>
+						<pre class="json">
+									<code data-trim data-noescape>
+										{
+										"iss": "http://idp.example.com",
+										"sub": "identity123456",
+										"aud": "rp.example.com",
+				
+										"exp": 1311281970,
+										"iat": 1311280970,
+										
+										"name": "Alice Doe",
+										"email": "alice@somedomain.org",
+										}
+									</code>
+								</pre>
+						<figcaption>Fig.9: Examplary Identity Token (decoded JWT)</figcaption>
+					</figure>
+				</div>
+			</section>
+
+			<section>
+				<h2>Authorization Code Flow (3)</h2>
+
+				<div class=" twoColumn">
+					<div>
+						<figure>
+							<img src="img/webpage4.svg" />
+							<figcaption>Fig.8: Authorization Code Flow</figcaption>
+						</figure>
+					</div>
+
+					<div style="font-size: 0.8em;text-align: left;">
+						<b>Relying Party (RP) requests authentication of User Agent</b>
+						<br />
+						<br />
+
+						<ol>
+							<li class="fragment highlight-current-blue">Gets <u>Authorization Request</u></li>
+							<li class="fragment highlight-current-blue">Authenticates and Consents: gets <u>Authorization Code</u></li>
+							<li class="fragment highlight-current-blue">Forward <u>Authorization Code</u></li>
+							<li class="fragment highlight-current-blue">Exchange Authorization Code: into <u>Identity Token</u></li>
+						</ol>
+					</div>
+				</div>
+			</section>
+
+			<section>
+				<h2>Authorization Code Flow (4)</h2>
+
+				<div>
+					Reply to 1: Authentication Request (as HTTP 302)
+					<pre class="url">
+							<code data-trim data-noescape>
+								HTTP/1.1 302 Found
+								Location: https://idp.example.com/authorize?
+									response_type=code
+									&scope=openid profile email phone address
+									&client_id=rp.example.com
+									&redirect_uri=https://rp.example.com/login-callback
+							</code>
+						</pre>
+				</div>
+
+				<div>
+					Reply to 2: Authentication Response
+					<pre class="url">
+							<code data-trim data-noescape>
+								HTTP/1.1 302 Found
+								Location: https://client.example.org/cb?
+											code=SomeRandomAuthenticationCode
+							</code>
+						</pre>
+				</div>
+			</section>
+
+			<section>
+				<h2>Authorization Code Flow (5)</h2>
+
+				RP exchanges Authorization Code to <b>Identity Token</b> and <b>Access Token</b>.
+
+				<p>Request:</p>
+				<div>
+					<pre class="url">
+						<code data-trim data-noescape>
+							POST /token HTTP/1.1
+							Host: idp.example.com
+							Content-Type: application/x-www-form-urlencoded
+							Authorization: Credentials
+
+							grant_type=authorization_code
+								&code=SomeRandomAuthenticationCode
+						</code>
+					</pre>
+				</div>
+			</section>
+
+			<section>
+				<h2>Authorization Code Flow (6)</h2>
+
+				RP exchanges Authorization Code to <b>Identity Token</b> and <b>Access Token</b>.
+
+				<p>Response:</p>
+				<div>
+					<pre class="url">
+						<code data-trim data-noescape>
+							HTTP/1.1 200 OK
+							Content-Type: application/json
+							Cache-Control: no-store
+							Pragma: no-cache
+
+							{
+							"token_type": "Bearer",
+							"access_token": "SomeAccessToken",
+							"expires_in": 3600,
+							"id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjFlOWdkazcifQ......"
+							}
+						</code>
+					</pre>
+				</div>
+
+				<small>OpenID Connect does not specify the Access Token format; often JWT is used.</small>
+			</section>
+
+			<section>
+				<h2>Authorization Code Flow (7)</h2>
+				JWTs must be validated <i>every time</i>.
+				<br /><br />
+				<ul>
+					<li>Is the token syntactically correct?</li>
+					<li>Is the token from the expected IDP?</li>
+					<li>Is the token for the recipient of the token?</li>
+					<li>Is the token <i>still</i> valid?</li>
+				</ul>
+
+				<br /><br />
+				<b>Recommendation:</b> implement <i>automated tests</i> covering these cases.
+			</section>
+
+			<section>
+				<h2>Authorization Code Flow (8)</h2>
+
+				IDP exposes UserInfo-endpoint to allow RP to fetch additional/ up-to-date data
+
+				<div>
+					<pre class="url">
+						<code data-trim data-noescape>
+							GET /userinfo HTTP/1.1
+							Host: idp.example.com
+							Authorization: Bearer SomeAccessToken
+
+							// Response
+							HTTP/1.1 200 OK
+							Content-Type: application/json
+							{
+							"sub": "identity123456",
+							"given_name": "Alice",
+							"preferred_username": "a.doe",,
+							"picture": "http://example.com/alice/me.jpg"
+							}
+						</code>
+					</pre>
+				</div>
+			</section>
+
+			<section>
+				<h2>IDP Endpoints</h2>
+				<p>An IDP exposes the following endpoints</p>
+				<ol>
+					<li>
+						<pre class="url"><code data-trim data-noescape>GET /authorize</code></pre>
+					</li>
+					<li>
+						<pre class="url"><code data-trim data-noescape>POST /token</code></pre>
+					</li>
+					<li>
+						<pre class="url"><code data-trim data-noescape>GET /userinfo</code></pre>
+					</li>
+					<li>
+						<pre class="url"><code data-trim data-noescape>GET /.well-known/openid-configuration</code></pre>
+						<small>
+							<a href="https://openid.net/specs/openid-connect-discovery-1_0.html">OpenID Connect: Discovery 1.0</a>
+						</small>
+					</li>
+				</ol>
+			</section>
+
+			<section>
+				<h2>How to integrate with an OpenID Provider</h2>
+
+				<ul>
+					<li>Select IDP(s)</li>
+
+					<li>Register at each IDP(client_id, client_secret, redirect_uri)
+						<ol>
+							<li>Define valid redirect_uri</li>
+							<li>Get client_id</li>
+							<li>Get IDP endpoints</li>
+						</ol>
+					</li>
+					<li>Setup fetching data regularly .well-known</li>
+				</ul>
+			</section>
+
+			<section>
+				<h2>Challenges: Usability</h2>
+				<ul>
+					<li>Signing out (from web application vs. IDP)</li>
+					<li>User Interface of the IDP may not align web application</li>
+					<li>Translations may not be available in web application, but in IDP</li>
+					<li>Can one user use different IDPs to authenticate</li>
+				</ul>
+			</section>
+
+			<section>
+				<section>
+					<h2>Challenges: Organizational</h2>
+					<ul>
+						<li>When to delete identity data?</li>
+						<li>How to get updates for identity data?</li>
+						<li>Can a user sign-in via different IDPs to the web application?</li>
+						<li>How to handle a 3rd-party IDP permanentely shutting down?</li>
+					</ul>
+				</section>
+				<section>
+					<h2>Demo</h2>
+					<a href="https://stackoverflow.com/users/login" target="_blank">Stackoverflow signin</a>
+				</section>
+			</section>
+
+			<section>
+				<section>
+					<h2>Quiz Time!</h2>
+
+					<figure>
+						<img src="img/qrcode_pingo.coactum.de.png" />
+						<figcaption>https://pingo.coactum.de/019099</figcaption>
+					</figure>
+
+					<a href="https://pingo.coactum.de/events/019099">PL</a>
+				</section>
+
+				<section>
+					<h3>(1) Who creates the Identity Token?</h3>
+
+					<ol>
+						<li>Browser/ User Agent</li>
+						<li class="fragment highlight-current-blue">Identity Provider</li>
+						<li>Relying Party</li>
+					</ol>
+				</section>
+
+				<section>
+					<h3>(2) What happens if the Identity Provider is temporarily not working?<br />
+
+						<ol style="list-style: upper-latin; font-size: 0.8em;">
+							<li>authenticated users will not see any impact</li>
+							<li>authenticated users will not be able re-authenticate</li>
+							<li>unauthenticated user cannot authenticate</li>
+						</ol>
+					</h3>
+
+					<ol>
+						<li>(A) and (B)</li>
+						<li>(A) and (B)</li>
+						<li class="fragment highlight-current-blue">(B) and (C)</li>
+						<li>all</li>
+					</ol>
+				</section>
+
+				<section>
+					<h3>(3) Who receives the Identity Token?</h3>
+
+					<ol>
+						<li class="fragment highlight-current-blue">Relying Party</li>
+						<li>Browser/ User Agent</li>
+						<li>Identity Provider</li>
+					</ol>
+				</section>
+
+				<section>
+					<h3>(4) Who initiates the Authorization Code Flow?</h3>
+
+					<ol>
+						<li class="fragment highlight-current-blue">Relying Party</li>
+						<li>Browser/ User Agent</li>
+						<li>Identity Provider</li>
+					</ol>
+				</section>
+
+				<section>
+					<h3>(5) Which steps are necessary to verify a JWT token? <br />
+
+						<ol style="list-style: upper-latin; font-size: 0.8em;">
+							<li>Decoding</li>
+							<li>Verification of Signature</li>
+							<li>Verification of Audience</li>
+							<li>Temporal validity</li>
+						</ol>
+					</h3>
+
+					<p>Options:</p>
+					<ol>
+						<li class="fragment highlight-current-blue">all</li>
+						<li>(A) and (D)</li>
+						<li>(B), (C)</li>
+						<li>(A), (C), (D)</li>
+					</ol>
+				</section>
+			</section>
+			<section>
+
+			</section>
+
+			<section>
+				<section>
+					<h2>Summary</h2>
+					<ol>
+						<li>Fundamentals: identity and authentication</li>
+						<li>Architecture pattern: Identity Provider</li>
+						<li>Implementation: OpenID Connect</li>
+					</ol>
+				</section>
+
+				<!-- Bonus -->
+				<section>
+					<h2>Playgrounds</h2>
+
+					<p>OpenID Connect IDPs:</p>
+					<ul>
+						<li>Using Google's IDP: <a href="https://developers.google.com/identity/openid-connect/openid-connect">link to docs</a></li>
+						<li>Authentik (self-hosting): https://goauthentik.io/</li>
+					</ul>
+				</section>
+
+				<section>
+					<h2>Further aspects</h2>
+					<ul>
+						<li>OpenID Connect token exchange</li>
+						<li>OAuth 2.0: <a href="https://datatracker.ietf.org/doc/html/rfc6749">RFC6749</a></li>
+						<li>OAuth 2.0 Bearer Token <a href="https://datatracker.ietf.org/doc/html/rfc6750">RFC6750</a></li>
+						<li>WebAuthn and FIDO2</li>
+						<li>SCIM</li>
+					</ul>
+				</section>
+			</section>
+
+
+			<section>
+				<h2>Authentication for Web-Applications with<br /> OpenID Connect</h2>
+				<figure>
+					<img src="img/Internet_dog.jpeg" style="height: 10em">
+					<figcaption>Fig.2: "On the Internet nobody knows you're a dog" <a href="">[Steiner,1993]</a></figcaption>
+				</figure>
+			</section>
+
+			<script>
+				// More info https://github.com/hakimel/reveal.js#configuration
+				Reveal.initialize({
+					controls: true,
+					progress: true,
+					center: true,
+					hash: true,
+					jumpToSlide: true,
+
+					slideNumber: true,
+
+					transition: 'fade', // none/fade/slide/convex/concave/zoom
+					transitionSpeed: 'slow', // default/fast/slow
+
+					// More info https://github.com/hakimel/reveal.js#dependencies
+					plugins: [RevealHighlight]
+				});
+
+			</script>
+
+</body>
+
+</html>
